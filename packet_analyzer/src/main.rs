@@ -3,7 +3,7 @@
 
 use std::{env, fmt};
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::Read;
 use bitreader::BitReader;
 
 enum IPProtocol {
@@ -372,22 +372,46 @@ impl PcapFile {
     }
 }
 
+#[derive(Debug)]
+enum Filter {
+    Host(String),
+    Port(String),
+    Ip(String),
+    Tcp(String),
+    Udp(String),
+    Icmp(String),
+    Net(String),
+    Count(i32),
+    Default(String),
+}
+
+impl Filter {
+    fn from_str(str: String, arg: String) -> Filter {
+        match &str[..] {
+            "host" => { Filter::Host(arg) }
+            "port" => { Filter::Port(arg) }
+            "ip" => { Filter::Ip(arg) }
+            "tcp" => { Filter::Tcp(arg) }
+            "udp" => { Filter::Udp(arg) }
+            "icmp" => { Filter::Icmp(arg) }
+            "net" => { Filter::Net(arg) }
+            "count" => { Filter::Count(arg.parse::<i32>().unwrap()) }
+            &_ => { Filter::Default(arg) }
+        }
+    }
+}
 
 fn main() {
-
-    // let mut file = std::fs::File::open("testfile.txt").unwrap();
-    // let mut contents = String::new();
-    // file.read_to_string(&mut contents).unwrap();
-    // print!("{}", contents);
-
-
     let args: Vec<String> = env::args().collect();
     let mut file_name = String::from("testmix.pcap");
-    if args.len() > 2{
-
-        file_name = args[2].clone();
+    if args.len() > 1 {
+        file_name = args[1].clone();
     }
-    println!("This is the argument: {}", file_name);
+    let mut filter = Filter::Default("default".to_owned());
+    if args.len() > 3 {
+        filter = Filter::from_str(args[2].clone(), args[3].clone())
+    }
+    println!("This is the argument: {:?}", filter);
     let mut pcap_header: PcapHeader = PcapHeader::new(); //Initializing a Pcap Header Structure
     let mut file: File = File::open(file_name).unwrap();
     let file_size: u64 = file.metadata().unwrap().len();
