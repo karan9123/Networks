@@ -1,5 +1,6 @@
 use std::fmt;
 
+#[derive(PartialOrd, PartialEq)]
 pub(crate) enum IPProtocol {
     ICMP,
     TCP,

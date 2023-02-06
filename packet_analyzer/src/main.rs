@@ -1,25 +1,25 @@
-#![allow(dead_code)]
-#![allow(unused_must_use)]
-
 mod ip_protocol;
 mod pcap_file_header;
 mod pcap_block;
 mod ethernet_frame;
 mod internet_packet;
-mod pcap_file;
+// mod pcap_file;
+mod internet_protocol_types;
 
 use std::{env, fmt};
 use std::fs::File;
 use std::io::Read;
+use std::str::FromStr;
 use bitreader::BitReader;
 use ip_protocol::IPProtocol;
 use pcap_file_header::PcapFileHeader;
 use ethernet_frame::EthernetFrame;
 use pcap_block::PcapBlock;
-use internet_packet::{ProtocolDatagram, ICMPPacket, UDPPacket, TCPPacket, IPacket};
+use internet_protocol_types::{ProtocolDatagram, ICMPPacket, UDPPacket, TCPPacket};
+use internet_packet::IPacket;
 // use pcap_file::PcapFile;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialOrd, PartialEq)]
 enum IPVersion {
     V4,
     V6,
@@ -35,91 +35,52 @@ impl fmt::Display for IPVersion {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Filter {
-    Host(String),
-    Port(String),
-    Ip(String),
-    Tcp(String),
-    Udp(String),
-    Icmp(String),
-    Net(String),
+    Host([u8; 4]),
+    Port([u8; 2]),
+    Ip,
+    Tcp,
+    Udp,
+    Icmp,
+    Net([u8; 4]),
     Count(i32),
     Default(String),
 }
 
 impl Filter {
-    fn from_str(str: String, arg: String) -> Filter {
-        match &str[..] {
-            "host" => { Filter::Host(arg) }
-            "port" => { Filter::Port(arg) }
-            "ip" => { Filter::Ip(arg) }
-            "tcp" => { Filter::Tcp(arg) }
-            "udp" => { Filter::Udp(arg) }
-            "icmp" => { Filter::Icmp(arg) }
-            "net" => { Filter::Net(arg) }
-            "-c" => { Filter::Count(arg.parse::<i32>().unwrap()) }
-            &_ => { Filter::Default(arg) }
+    fn from_str(str: Vec<String>) -> Filter {
+        if str.len() ==1{
+            match str[0].as_str(){
+                "tcp" => {Filter::Tcp},
+                "udp" =>{Filter::Udp},
+                "icmp" => {Filter::Icmp},
+                "ip" => {Filter::Ip}
+                _ => {Filter::Default("Default".to_string())}
+            }
         }
-    }
-}
-
-fn main() {
-    let args: Vec<String> = env::args().collect();
-    let mut file_name = String::from("testmix.pcap");
-    if args.len() > 1 {
-        file_name = args[1].clone();
-    }
-    let mut filter = Filter::Default("default".to_owned());
-    if args.len() > 3 {
-        filter = Filter::from_str(args[2].clone(), args[3].clone())
-    }
-    println!("This is the argument: {:?}", filter);
-
-
-    let mut pcap_header: PcapFileHeader = PcapFileHeader::new(); //Initializing a Pcap Header Structure
-    let mut file: File = File::open(file_name).unwrap(); //reading the file
-    let file_size: u64 = file.metadata().unwrap().len(); //File size (bytes)
-    let mut byte_count: u64 = 0; //This counter is used to track the bytes reader has read from the file
-
-
-    //This is PCAP Header
-    file.read(&mut pcap_header.magic_number).unwrap();
-    file.read(&mut pcap_header.version_major).unwrap();
-    file.read(&mut pcap_header.version_minor).unwrap();
-    file.read(&mut pcap_header.time_zone).unwrap();
-    file.read(&mut pcap_header.timestamp_accuracy).unwrap();
-    file.read(&mut pcap_header.snap_length).unwrap();
-    file.read(&mut pcap_header.link_layer_type).unwrap();
-    byte_count += 24;  //Because the size of PCAP Header is 24 bytes
-
-    // let pcap_file = PcapFile::new_with_header(pcap_header); //Initializing the PCAP file with the header
-    let mut packet_count = 0; //Count of network packets in PCAP File
-
-    loop {
-        if byte_count + 20 > file_size {
-            println!("\n\n\n------------>>>>>>Number of packets in the file: {}", packet_count);
-            break;
+        else {
+            match str[0].as_str() {
+                "host" => {
+                    let k: Vec<&str> = str[1].split(".").collect();
+                    Filter::Host([u8::from_str(k[0]).unwrap(), u8::from_str(k[1]).unwrap(),
+                        u8::from_str(k[2]).unwrap(), u8::from_str(k[3]).unwrap()])
+                }
+                "port" => {
+                    let num = u16::from_str(&*str[1]).unwrap();
+                    let b1 = (num >> 8) as u8;
+                    let b2 = num as u8;
+                    Filter::Port([b1, b2])
+                }
+                "net" => {
+                    let k: Vec<&str> = str[1].split(".").collect();
+                    Filter::Net([u8::from_str(k[0]).unwrap(), u8::from_str(k[1]).unwrap(),
+                        u8::from_str(k[2]).unwrap(), u8::from_str(k[3]).unwrap()])
+                }
+                "-c" => { Filter::Count(str[1].parse::<i32>().unwrap()) }
+                &_ => { Filter::Default("default".to_string()) }
+            }
         }
-
-        packet_count += 1;
-        let mut pcap_block = PcapBlock::new(); //Initializing a new PCAP Block
-
-        file.read(&mut pcap_block.timestamp_seconds).unwrap();
-        file.read(&mut pcap_block.timestamp_microseconds).unwrap();
-        file.read(&mut pcap_block.captured_length).unwrap();
-        file.read(&mut pcap_block.original_length).unwrap();
-
-        byte_count += 16;
-        byte_count += u32::from_ne_bytes(pcap_block.captured_length.clone()) as u64;
-
-        let mut block_data = vec![0_u8; u32::from_ne_bytes(pcap_block.captured_length) as usize];
-        file.read(&mut block_data).unwrap();
-
-        pcap_block.ether_frame = create_and_return_ether(block_data);
-        // pcap_file.data.push(pcap_block); //Instead of print, we can use this command to create
-        // the complete PCAP file struct with Pcap Blocks
-        print_pcap(pcap_block);
     }
 }
 
@@ -229,9 +190,9 @@ fn create_and_return_ether(data: Vec<u8>) -> EthernetFrame {
         ihl,
         tos,
         precedence,
-        normal_delay,
-        normal_throughput,
-        normal_reliability,
+        delay: normal_delay,
+        throughput: normal_throughput,
+        reliability: normal_reliability,
         total_length,
         identification,
         reserved_flag,
@@ -258,12 +219,150 @@ fn create_and_return_ether(data: Vec<u8>) -> EthernetFrame {
     }
 }
 
-fn print_pcap(block: PcapBlock) {
-    // let mut file = File::create("testfile.txt").unwrap();
-    //
-    // let bytes = bincode::serialize(&block.ether_frame).unwrap();
-    // file.write_all(bytes);
+fn print_pcap(block: PcapBlock, filter: Filter) {
 
-    println!("{}", block.ether_frame);
-    println!("{}\n\n", block.ether_frame.packet);
+    match filter {
+        Filter::Host(address) => {
+            if block.ether_frame.packet.source_add == address ||
+                block.ether_frame.packet.destination_add == address {
+                println!("{}", block.ether_frame);
+                println!("{}\n\n", block.ether_frame.packet);
+            }
+        }
+        Filter::Port(port) => {
+            if block.ether_frame.packet.protocol == IPProtocol::UDP ||
+                block.ether_frame.packet.protocol == IPProtocol::TCP {
+                let mut src = [0, 0];
+                let mut dst = [0, 0];
+                match block.ether_frame.packet.datagram {
+                    ProtocolDatagram::TCP(ref packet) => {
+                        src = packet.source_port.clone();
+                        dst = packet.destination_port.clone();
+                    }
+                    ProtocolDatagram::UDP(ref packet) => {
+                        src = packet.source_port.clone();
+                        dst = packet.destination_port.clone();
+                    }
+                    ProtocolDatagram::ICMP(_) => {}
+                    ProtocolDatagram::Default(_) => {}
+                }
+                if [src, dst].contains(&port) {
+                    println!("{}", block.ether_frame);
+                    println!("{}\n\n", block.ether_frame.packet);
+                }
+            }
+        }
+        Filter::Ip => {
+            if block.ether_frame.version == IPVersion::V4 {
+                println!("{}", block.ether_frame);
+                println!("{}\n\n", block.ether_frame.packet);
+            }
+        }
+        Filter::Tcp => {
+            if block.ether_frame.packet.protocol == IPProtocol::TCP{
+                println!("{}", block.ether_frame);
+                println!("{}\n\n", block.ether_frame.packet);
+            }
+        }
+        Filter::Udp => {
+            if block.ether_frame.packet.protocol == IPProtocol::UDP{
+                println!("{}", block.ether_frame);
+                println!("{}\n\n", block.ether_frame.packet);
+            }
+        }
+        Filter::Icmp => {
+            if block.ether_frame.packet.protocol == IPProtocol::ICMP{
+                println!("{}", block.ether_frame);
+                println!("{}\n\n", block.ether_frame.packet);
+            }
+        }
+        Filter::Net(address) => {
+            if block.ether_frame.packet.source_add == address ||
+                block.ether_frame.packet.destination_add == address {
+                println!("{}", block.ether_frame);
+                println!("{}\n\n", block.ether_frame.packet);
+            }
+        }
+        Filter::Count(count) => {
+            if count > 0 {
+                println!("{}", block.ether_frame);
+                println!("{}\n\n", block.ether_frame.packet);
+            }
+        }
+        Filter::Default(_) => {
+            println!("{}", block.ether_frame);
+            println!("{}\n\n", block.ether_frame.packet);
+        }
+    }
 }
+
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    let mut file_name = String::from("testmix.pcap");
+    if args.len() > 1 {
+        file_name = args[1].clone();
+    }
+    let mut filter = Filter::Default("default".to_owned());
+    if args.len() > 2 {
+        filter = Filter::from_str(args[2..].to_vec())
+    }
+    let mut pcap_header: PcapFileHeader = PcapFileHeader::new(); //Initializing a Pcap Header Structure
+    let mut file: File = File::open(file_name).unwrap(); //reading the file
+    let file_size: u64 = file.metadata().unwrap().len(); //File size (bytes)
+    let mut byte_count: u64 = 0; //This counter is used to track the bytes reader has read from the file
+
+
+    //This is PCAP Header
+    file.read(&mut pcap_header.magic_number).unwrap();
+    file.read(&mut pcap_header.version_major).unwrap();
+    file.read(&mut pcap_header.version_minor).unwrap();
+    file.read(&mut pcap_header.time_zone).unwrap();
+    file.read(&mut pcap_header.timestamp_accuracy).unwrap();
+    file.read(&mut pcap_header.snap_length).unwrap();
+    file.read(&mut pcap_header.link_layer_type).unwrap();
+    byte_count += 24;  //Because the size of PCAP Header is 24 bytes
+
+    // let pcap_file = PcapFile::new_with_header(pcap_header); //Initializing the PCAP file with the header
+    let mut packet_count = 0; //Count of network packets in PCAP File
+
+    loop {
+        let my_filter = filter.clone();
+        filter = my_filter.clone();
+        match filter {
+            Filter::Host(_) => {}
+            Filter::Port(_) => {}
+            Filter::Ip => {}
+            Filter::Tcp => {}
+            Filter::Udp => {}
+            Filter::Icmp => {}
+            Filter::Net(_) => {}
+            Filter::Count(count) => {
+                filter = Filter::Count(count - 1)
+            }
+            Filter::Default(_) => {}
+        }
+        if byte_count + 20 > file_size {
+            break;
+        }
+
+        packet_count += 1;
+        let mut pcap_block: PcapBlock = PcapBlock::new(); //Initializing a new PCAP Block
+        file.read(&mut pcap_block.timestamp_seconds).unwrap();
+        file.read(&mut pcap_block.timestamp_microseconds).unwrap();
+        file.read(&mut pcap_block.captured_length).unwrap();
+        file.read(&mut pcap_block.original_length).unwrap();
+
+        byte_count += 16;
+        byte_count += u32::from_ne_bytes(pcap_block.captured_length.clone()) as u64;
+
+        let mut pcap_block_data = vec![0_u8; u32::from_ne_bytes(pcap_block.captured_length) as usize];
+        file.read(&mut pcap_block_data).unwrap();
+
+        pcap_block.ether_frame = create_and_return_ether(pcap_block_data);
+        // pcap_file.data.push(pcap_block); //Instead of print, we can use this command to create
+        // the complete PCAP file struct with Pcap Blocks
+        print_pcap(pcap_block, my_filter);
+    }
+}
+
