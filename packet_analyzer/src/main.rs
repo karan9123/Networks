@@ -299,7 +299,7 @@ fn print_pcap(block: PcapBlock, filter: Filter) {
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let mut file_name = String::from("testmix.pcap");
+    let mut file_name = String::from("many_icmp.pcap");
     if args.len() > 1 {
         file_name = args[1].clone();
     }
@@ -343,6 +343,7 @@ fn main() {
             Filter::Default(_) => {}
         }
         if byte_count + 20 > file_size {
+            println!("Total number of packets in the file(Without Filter): {}", packet_count);
             break;
         }
 
