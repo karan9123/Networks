@@ -99,15 +99,15 @@ fn create_and_return_ether(data: Vec<u8>) -> EthernetFrame {
     let temp = [data[15].clone()];
     let mut type_of_service = BitReader::new(&temp);
     let precedence = type_of_service.read_u8(3).unwrap();
-    let normal_delay = type_of_service.read_u8(1).unwrap();
-    let normal_throughput = type_of_service.read_u8(1).unwrap();
-    let normal_reliability = type_of_service.read_u8(1).unwrap();
+    let delay = type_of_service.read_u8(1).unwrap();
+    let throughput = type_of_service.read_u8(1).unwrap();
+    let reliability = type_of_service.read_u8(1).unwrap();
     let tos = type_of_service.read_u8(2).unwrap();
 
     let total_length: [u8; 2] = data[16..18].try_into().unwrap();
     let identification: [u8; 2] = data[18..20].try_into().unwrap();
 
-    let temp = [data[20].clone(), data[22].clone()];
+    let temp = [data[20].clone(), data[21].clone()];
     let mut flags = BitReader::new(&temp);
     let reserved_flag = flags.read_u8(1).unwrap();
     let do_not_fragment_flag = flags.read_u8(1).unwrap();
@@ -169,8 +169,13 @@ fn create_and_return_ether(data: Vec<u8>) -> EthernetFrame {
             tcp.destination_port = data[(current + 2)..(current + 4)].try_into().unwrap();
             tcp.sequence_number = data[(current + 4)..(current + 8)].try_into().unwrap();
             tcp.acknowledgement_number = data[(current + 8)..(current + 12)].try_into().unwrap();
-            tcp.data_offset = data[current + 12];
-            tcp.flags = data[current + 13];
+
+            let data_offset_and_flags = data[current + 12];
+            let data_offset = (data_offset_and_flags >> 4) & 0xF;
+            let flags = data_offset_and_flags & 0xF;
+
+            tcp.data_offset = data_offset * 4;
+            tcp.flags = flags;
             tcp.window = data[(current + 14)..(current + 16)].try_into().unwrap();
             tcp.checksum = data[(current + 16)..(current + 18)].try_into().unwrap();
             tcp.urgent_pointer = data[(current + 18)..(current + 20)].try_into().unwrap();
@@ -190,9 +195,9 @@ fn create_and_return_ether(data: Vec<u8>) -> EthernetFrame {
         ihl,
         tos,
         precedence,
-        delay: normal_delay,
-        throughput: normal_throughput,
-        reliability: normal_reliability,
+        delay,
+        throughput,
+        reliability,
         total_length,
         identification,
         reserved_flag,
@@ -299,7 +304,7 @@ fn print_pcap(block: PcapBlock, filter: Filter) {
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let mut file_name = String::from("many_icmp.pcap");
+    let mut file_name = String::from("test.pcap");
     if args.len() > 1 {
         file_name = args[1].clone();
     }

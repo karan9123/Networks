@@ -103,11 +103,13 @@ pub(crate) struct TCPPacket {
     pub(crate) destination_port: [u8; 2],
     pub(crate) sequence_number: [u8; 4],
     pub(crate) acknowledgement_number: [u8; 4],
-    pub(crate) data_offset: u8,
-    pub(crate) flags: u8,
+    pub(crate) data_offset: u8, //Taken from same bit as flag
+    pub(crate) flags: u8, //Taken from the same bit as data_offset
     pub(crate) window: [u8; 2],
     pub(crate) checksum: [u8; 2],
     pub(crate) urgent_pointer: [u8; 2],
+    pub(crate) options: Option<Vec<u8>>, //Can range from 0 to 40 bytes
+
 }
 
 impl TCPPacket {
@@ -122,6 +124,7 @@ impl TCPPacket {
             window: [0, 0],
             checksum: [0, 0],
             urgent_pointer: [0, 0],
+            options: None
         }
     }
 }
@@ -133,11 +136,15 @@ impl fmt::Display for TCPPacket {
         write!(f, "TCP: Source Port       = {}\n", u16::from_be_bytes(self.source_port))?;
         write!(f, "TCP: Destination Port  = {}\n", u16::from_be_bytes(self.destination_port))?;
         write!(f, "TCP: Sequence number   = {}\n", u32::from_be_bytes(self.sequence_number))?;
-        write!(f, "TCP: Acknowledgement number = {}\n", u32::from_be_bytes(self.acknowledgement_number))?;
-        write!(f, "TCP: Data offset       = {}\n", self.data_offset)?;
+        write!(f, "TCP: Acknowledgement number     = {}\n", u32::from_be_bytes(self.acknowledgement_number))?;
+        write!(f, "TCP: Data offset(header length) = {} bytes\n", self.data_offset)?;
         write!(f, "TCP: Flags             = {}\n", self.flags)?;
         write!(f, "TCP: Window            = {}\n", u16::from_be_bytes(self.window))?;
         write!(f, "TCP: Checksum          = 0x{:x}{:x}\n", self.checksum[0], self.checksum[1])?;
-        write!(f, "TCP: Urgent pointer    = {}\n", u16::from_be_bytes(self.urgent_pointer))
+        write!(f, "TCP: Urgent pointer    = {}\n", u16::from_be_bytes(self.urgent_pointer))?;
+        match self.options.clone() {
+            None => write!(f, "No options\n"),
+            Some(op) => write!(f, "Options: {}\n", op.len())
+        }
     }
 }

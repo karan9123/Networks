@@ -58,25 +58,25 @@ impl fmt::Display for IPacket {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "IP: -----IP Header-----\n")?;
         write!(f, "IP:\n")?;
-        write!(f, "IP: Version= {}\n", self.version)?;
-        write!(f, "IP: Header length= {} bytes\n", (self.ihl * 4))?;
+        write!(f, "IP: Version         = {}\n", self.version)?;
+        write!(f, "IP: Header length   = {} bytes\n", (self.ihl * 4))?;
         write!(f, "IP: Type of service = 0x{:x}\n", self.tos)?;
-        write!(f, "IP:     xxx. ....= {}(precedence)\n", self.precedence)?;
-        write!(f, "IP:     ...{} ....= {} delay \n", self.delay, if self.delay == 0 {"normal"} else { "abnormal"})?;
-        write!(f, "IP:     .... {}...= {} throughput\n", self.throughput, if self.throughput == 0 {"normal"} else { "abnormal"})?;
-        write!(f, "IP:     .... .{}..= {} reliability\n", self.reliability, if self.reliability == 0 {"normal"} else { "abnormal"})?;
-        write!(f, "IP: Total length= {} bytes\n", u16::from_be_bytes(self.total_length))?;
-        write!(f, "IP: Identification= {}\n", u16::from_be_bytes(self.identification))?;
+        write!(f, "IP:     xxx. ....   = {}(precedence)\n", self.precedence)?;
+        write!(f, "IP:     ...{} ....  = {} delay \n", self.delay, if self.delay == 0 {"normal"} else { "low"})?;
+        write!(f, "IP:     .... {}...  = {} throughput\n", self.throughput, if self.throughput == 0 {"normal"} else { "high"})?;
+        write!(f, "IP:     .... .{}..  = {} reliability\n", self.reliability, if self.reliability == 0 {"normal"} else { "high"})?;
+        write!(f, "IP: Total length    = {} bytes\n", u16::from_be_bytes(self.total_length))?;
+        write!(f, "IP: Identification  = {}\n", u16::from_be_bytes(self.identification))?;
         write!(f, "IP: Flags: \n")?;
-        write!(f, "IP:     {}... .... = reserved\n", self.reserved_flag)?;
-        write!(f, "IP:     .{}.. .... = do not fragment\n", self.do_not_fragment_flag)?;
-        write!(f, "IP:     ..{}. .... = last fragment\n", self.last_fragment_flag)?;
-        write!(f, "IP: Fragment offset= {} bytes\n", self.fragment_offset)?;
-        write!(f, "IP: Time to live= {} seconds/hops\n", self.ttl)?;
-        write!(f, "IP: Protocol= {}\n", self.protocol)?;
-        write!(f, "IP: Header checksum: 0x{:x}{:x}\n", self.header_checksum[0], self.header_checksum[1])?;
-        write!(f, "IP: Source address: {}\n", format!("{}.{}.{}.{}", self.source_add[0], self.source_add[1], self.source_add[2], self.source_add[3]))?;
-        write!(f, "IP: Destination address: {}\n", format!("{}.{}.{}.{}", self.destination_add[0], self.destination_add[1], self.destination_add[2], self.destination_add[3]))?;
+        write!(f, "IP:     {}... ....  = {}\n", self.reserved_flag, if self.reserved_flag == 0 {"reserved"} else {"not reserved"})?;
+        write!(f, "IP:     .{}.. ....  = {}fragment\n", self.do_not_fragment_flag, if self.do_not_fragment_flag == 1 {"do not "} else {""})?;
+        write!(f, "IP:     ..{}. ....  = last fragment\n", self.last_fragment_flag)?;
+        write!(f, "IP: Fragment offset = {} bytes\n", self.fragment_offset)?;
+        write!(f, "IP: Time to live    = {} seconds/hops\n", self.ttl)?;
+        write!(f, "IP: Protocol        = {}\n", self.protocol)?;
+        write!(f, "IP: Header checksum = 0x{:x}{:x}\n", self.header_checksum[0], self.header_checksum[1])?;
+        write!(f, "IP: Source address  = {}\n", format!("{}.{}.{}.{}", self.source_add[0], self.source_add[1], self.source_add[2], self.source_add[3]))?;
+        write!(f, "IP: Destination address= {}\n", format!("{}.{}.{}.{}", self.destination_add[0], self.destination_add[1], self.destination_add[2], self.destination_add[3]))?;
         match self.options.clone() {
             None => write!(f, "No options\n")?,
             Some(op) => write!(f, "Options: {}\n", op.len())?
