@@ -1,3 +1,11 @@
+#![allow(unused_imports)]
+#![allow(unused_variables)]
+#![allow(dead_code)]
+#![allow(unaligned_references)]
+#![allow(unused_mut)]
+#![allow(unused_assignments)]
+
+
 mod ip_protocol;
 mod pcap_file_header;
 mod pcap_block;
@@ -9,6 +17,7 @@ mod internet_protocol_types;
 use std::{env, fmt};
 use std::fs::File;
 use std::io::Read;
+use std::net::UdpSocket;
 use std::str::FromStr;
 use bitreader::BitReader;
 use ip_protocol::IPProtocol;
@@ -302,7 +311,7 @@ fn print_pcap(block: PcapBlock, filter: Filter) {
 }
 
 
-fn main() {
+/*fn main() {
     let args: Vec<String> = env::args().collect();
     let mut file_name = String::from("test.pcap");
     if args.len() > 1 {
@@ -370,5 +379,19 @@ fn main() {
         // the complete PCAP file struct with Pcap Blocks
         print_pcap(pcap_block, my_filter);
     }
+}*/
+
+fn main(){
+    let rcv_socket = UdpSocket::bind("0.0.0.0:4331").expect("could not bind to the receive socket");
+    println!("Listening on: {}", rcv_socket.local_addr().unwrap());
+    let mut buf = [0; 1024];
+
+    let (number_of_bytes, src_addr) = rcv_socket.recv_from(&mut buf)
+        .expect("Didn't receive data");
+    let filled_buf =  buf[..number_of_bytes].to_vec();
+    let ethernet_frame = create_and_return_ether(filled_buf);
+    println!("{}", ethernet_frame);
+    println!("{}", ethernet_frame.packet);
+
 }
 

@@ -13,14 +13,14 @@ pub(crate) struct ICMPPacket {
 }
 
 impl ICMPPacket {
-    pub(crate) fn new_echo_request(data: Vec<u8>, code: u8,
-                                   checksum: u16, identifier: u16,
+    pub(crate) fn new_echo_request(data: Vec<u8>,
+                                   checksum: u16,
                                    sequence: u16) -> ICMPPacket {
         ICMPPacket {
-            packet_type: 8,
-            code,
+            packet_type: 0x01,
+            code: 0x08,
             checksum,
-            identifier,
+            identifier: 0x9191,
             sequence,
             data,
         }
