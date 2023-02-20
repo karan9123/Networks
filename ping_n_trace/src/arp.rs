@@ -58,10 +58,8 @@ impl ArpPacket {
         }
     }*/
 
-    pub fn new_ethernet_ipv4_request(target_proto_addr: [u8; 4]) -> Self {
+    pub fn new_ethernet_ipv4_request(target_proto_addr: [u8; 4],sender_hw_addr: [u8; 6] ) -> Self {
         let my_addr = get_my_ipv4_protocol_address().unwrap();
-
-        let sender_hw_addr = get_mac_address().unwrap().unwrap().bytes();
         let sender_proto_addr = my_addr.octets();
 
         Self {

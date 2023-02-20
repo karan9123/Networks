@@ -11,9 +11,7 @@ pub(crate) struct EthernetFrame {
 }
 
 impl EthernetFrame {
-    pub(crate) fn new(destination_address: [u8; 6], payload: Vec<u8>) -> EthernetFrame {
-
-        let source_address = get_mac_address().unwrap().unwrap().bytes();
+    pub(crate) fn new_arp(destination_address: [u8; 6], source_address: [u8; 6], payload: Vec<u8>) -> EthernetFrame {
         EthernetFrame {
             destination_address,
             source_address,
