@@ -1,0 +1,56 @@
+version: '3'
+
+services:
+  queeg:
+    image: karan9123/kalihost
+    command: /bin/bash
+    privileged: true
+    networks:
+      default:
+        ipv4_address: 129.21.30.37
+    ports:
+      - "3001:520"
+    tty: true
+    stdin_open: true
+
+  comet:
+    image: karan9123/kalihost
+    command: /bin/bash
+    privileged: true
+    networks:
+      default:
+        ipv4_address: 129.21.34.80
+    ports:
+      - "3002:520"
+    tty: true
+    stdin_open: true
+
+  rhea:
+    image: karan9123/kalihost
+    command: /bin/bash
+    privileged: true
+    networks:
+      default:
+        ipv4_address: 129.21.37.49
+    ports:
+      - "3003:520"
+    tty: true
+    stdin_open: true
+
+  glados:
+    image: karan9123/kalihost
+    command: /bin/bash
+    privileged: true
+    networks:
+      default:
+        ipv4_address: 129.21.22.196
+    ports:
+      - "3004:520"
+    tty: true
+    stdin_open: true
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 129.21.0.0/16
