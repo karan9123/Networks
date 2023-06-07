@@ -2,7 +2,7 @@
 This project implements a distance-vector routing protocol called RIP (Routing Information Protocol). RIP enables routers in a network to exchange routing information with each other to compute the shortest paths from each router to all the other routers in the network.
 
 ## Network Topology
-The network consists of four virtual routers that act as processes or threads running on separate computers connected to different networks. The four virtual routers are:
+The network consists of four virtual routers. The four virtual routers are:
 
 - queeg: 129.21.30.37
 - comet: 129.21.34.80
